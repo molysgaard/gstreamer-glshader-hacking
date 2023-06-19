@@ -5,10 +5,10 @@ use gst::prelude::*;
 use gstreamer as gst;
 use gstreamer_gl as gstgl;
 
-const img_width: usize = 800;
-const img_height: usize = 800;
+const IMG_WIDTH: usize = 800;
+const IMG_HEIGHT: usize = 800;
 
-const ball_shader: &'static str = "\
+const BALL_SHADER: &'static str = "\
 // For GStreamer glshader
 #version 100
 #ifdef GL_ES
@@ -23,7 +23,8 @@ uniform float cx;
 uniform float cy;
 
 void main() {
-    vec2 c = vec2(cx, cy);
+    //vec2 c = (vec2(cos(time), sin(time))+1.0) / 2.0;
+    vec2 c = vec2(cx,cy);
     float r = 0.1;
     vec2 p = vec2(gl_FragCoord.x/width, gl_FragCoord.y/height);
 
@@ -35,7 +36,7 @@ void main() {
         color = vec4(1.0, 1.0, 1.0, 1.0);
     }
     else {
-        color = vec4(0.0, 0.0, 0.0, 1.0);
+        color = vec4(0.2, 0.2, 0.2, 1.0);
     }
     gl_FragColor = color;
 }
@@ -50,7 +51,7 @@ fn main() -> Result<()> {
     let videoconvert_0 = gst::ElementFactory::make("videoconvert").build()?;
     let glupload = gst::ElementFactory::make("glupload").build()?;
     let glshader = gst::ElementFactory::make("glshader").build()?;
-    glshader.set_property("fragment", ball_shader);
+    glshader.set_property("fragment", BALL_SHADER);
     let glimagesink = gst::ElementFactory::make("glimagesink").build()?;
 
     pipeline.add(&videotestsrc)?;
@@ -61,7 +62,7 @@ fn main() -> Result<()> {
 
     videotestsrc.link(&videoconvert_0)?;
     let caps = gst::Caps::from_str(&format!(
-        "video/x-raw,format=RGBA,width={img_width},height={img_height}"
+        "video/x-raw,format=RGBA,width={IMG_WIDTH},height={IMG_HEIGHT}"
     ))
     .unwrap();
     videoconvert_0.link_filtered(&glupload, &caps)?;
@@ -72,13 +73,18 @@ fn main() -> Result<()> {
     pipeline.set_state(gst::State::Playing)?;
 
     // Here we would like to update the position of the ball live, `[cx, cy]`
-    for _i in 0..50 {
+    for i in 0..50 {
+        let time = 0.1 * i as f32;
         if glshader.has_property("shader", None) {
-            println!("shader prop type: {:?}", glshader.property_type("shader").unwrap());
-            let sh: gstgl::GLShader = glshader.property::<gstgl::GLShader>("shader");
-            println!("shader: {:?}", sh);
-            sh.set_uniform_1f("cx", 0.5f32);
-            sh.set_uniform_1f("cy", 0.5f32);
+            let shv = glshader.property_value("shader");
+            if let Ok(sh) = shv.get_owned::<gstgl::GLShader>() {
+                println!("shader: {:?}", sh);
+                let x = time.cos();
+                let y = time.sin();
+                sh.set_uniform_1f("cx", x);
+                sh.set_uniform_1f("cy", y);
+                glshader.set_property("update-shader", true);
+            }
         }
         std::thread::sleep(Duration::from_secs_f64(0.1));
     }
