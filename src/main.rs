@@ -78,8 +78,8 @@ fn main() -> Result<()> {
         let sh: Option<gstgl::GLShader> = glshader.property("shader");
         if let Some(sh) = sh {
             println!("shader: {:?}", sh);
-            let x = time.cos();
-            let y = time.sin();
+            let x = (time.cos() - 1.0) / 2.0;
+            let y = (time.sin() - 1.0) / 2.0;
             sh.set_uniform_1f("cx", x);
             sh.set_uniform_1f("cy", y);
             glshader.set_property("update-shader", true);
