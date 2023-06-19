@@ -75,16 +75,14 @@ fn main() -> Result<()> {
     // Here we would like to update the position of the ball live, `[cx, cy]`
     for i in 0..50 {
         let time = 0.1 * i as f32;
-        if glshader.has_property("shader", None) {
-            let shv = glshader.property_value("shader");
-            if let Ok(sh) = shv.get_owned::<gstgl::GLShader>() {
-                println!("shader: {:?}", sh);
-                let x = time.cos();
-                let y = time.sin();
-                sh.set_uniform_1f("cx", x);
-                sh.set_uniform_1f("cy", y);
-                glshader.set_property("update-shader", true);
-            }
+        let sh: Option<gstgl::GLShader> = glshader.property("shader");
+        if let Some(sh) = sh {
+            println!("shader: {:?}", sh);
+            let x = time.cos();
+            let y = time.sin();
+            sh.set_uniform_1f("cx", x);
+            sh.set_uniform_1f("cy", y);
+            glshader.set_property("update-shader", true);
         }
         std::thread::sleep(Duration::from_secs_f64(0.1));
     }
